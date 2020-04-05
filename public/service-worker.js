@@ -1,10 +1,17 @@
 var CACHE_NAME = 'budget-v1';
+const API_CACHE_NAME = 'trasnsation-v1';
 var urlsToCache = [
   '/',
   '/styles.css',
   '/index.js',
-  '/db.js'
+  '/index.html',
+  '/db.js',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png'
 ];
+
+
+
 self.addEventListener('install', function(event) {
   // Perform install steps
   event.waitUntil(
@@ -14,17 +21,40 @@ self.addEventListener('install', function(event) {
         return cache.addAll(urlsToCache);
       })
   );
+  self.skipWaiting();
 });
+
+
+
+
+
+
 self.addEventListener("fetch", function(event) {
+  if (event.request.url.includes("/api/")) {
+    event.respondWith(
+    caches.open(API_CACHE_NAME).then(cache => {
+      return fetch(event.request)
+      .then(resp => {
+        cache.put(event.request.url, resp.clone());
+        console.log('api cache open');
+        return resp;
+      })
+      .catch(error => {
+        return cache.match(event.request);
+      });
+    })
+    .catch(error => console.log(error))
+    );
+    return;
+  };
+
   event.respondWith(
-    fetch(event.request).catch(function() {
-      return caches.match(event.request).then(function(response) {
-        if (response) {
-          return response;
-        } else if (event.request.headers.get("accept").includes("text/html")) {
-          return caches.match("/index.html");
-        }
+    caches.open(CACHE_NAME).then(cache => {
+      return cache.match(event.request).then(resp => {
+        return resp || fetch(event.request);
       });
     })
   );
 });
+  
+ 
